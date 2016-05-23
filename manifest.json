@@ -1,0 +1,44 @@
+{
+    "name": "ARC scanner",
+    "version": "0.0.1",
+    "author": "Quan Yang",
+    "description": "Automatic Cross-site (scripting) scanner",
+    "manifest_version": 2,  
+    "icons": {
+        "16": "images/icon16.png",
+        "48": "images/icon48.png",
+        "128": "images/icon128.png"
+    },
+    "permissions": [
+        "debugger",
+        "experimental",
+        "webRequest",
+        "activeTab",
+        "storage",
+        "background",
+        "contextMenus",
+        "tabs",
+        "contentSettings",
+        "webNavigation",
+        "*://*/*",
+        "https://*/*",
+        "<all_urls>"
+    ],
+    "browser_action": {
+        "default_title": "Enter ARC scanner",
+        "default_icon": {
+            "19": "images/icon19.png",
+            "38": "images/icon38.png"
+        },
+        "default_title": "ARC scanner"
+    },
+    "content_scripts": [
+        {
+            "matches": ["http://*/*", "https://*/*"],
+            "js": ["external/jquery/jquery.js","content.js"]
+        }
+    ],
+    "background": {
+        "scripts": ["background.js"]
+    }
+}
