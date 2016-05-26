@@ -15,6 +15,10 @@ input,a,li {
     outline:none;
 }
 
+.urlTd {
+    cursor: pointer;
+}
+
  td,  th { 
     white-space:pre-wrap;
     border-radius:0px;
