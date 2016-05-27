@@ -94,13 +94,13 @@ function handleResponse(responseData, response, requestId) {
     var detectReflectionFromKeyOrValue = (key && responseBody.indexOf(key) > -1) || (value && responseBody.indexOf(value) > -1);
 
     if (key && responseBody.indexOf(key) > -1) {
-      if (testArbitraryReflection(requestUrl, request.method, key)) {
+      if (testArbitraryReflection(requestUrl, request.method, param[0])) {
         paramsTd.textContent += "Key: " + key + "\n";
         reflected = true;
       }
     }
     if (value && responseBody.indexOf(value) > -1) {
-      if (testArbitraryReflection(requestUrl, request.method, value)) {
+      if (testArbitraryReflection(requestUrl, request.method, param[1])) {
         paramsTd.textContent += "Value: " + value + "\n";
         reflected = true;
       }
@@ -117,18 +117,24 @@ function handleResponse(responseData, response, requestId) {
 function testArbitraryReflection(url, method, value) {
   if (method == "GET") {
     var randomNonce = Math.floor(Math.random() * 2147483647);
-    var newUrl = url.replace(new RegExp(value, 'g'), randomNonce);
+    var newUrl = replaceAll(url, value, randomNonce);
 
     var xhr = new XMLHttpRequest();
 
     xhr.open("GET", newUrl, false);
     xhr.send();
-
     var result = xhr.responseText;
     return result.indexOf(randomNonce) > -1;
   }
   // For now, return true to other method types.
   return true;
+}
+
+function replaceAll(original, oldChar, newChar) {
+  while (original.indexOf(oldChar) > -1) {
+    original = original.replace(oldChar, newChar);
+  }
+  return original
 }
 
 function formatHeaders(headers) {
