@@ -20,10 +20,12 @@ function onEvent(debuggeeId, message, params) {
       requests[params.requestId] = params.request;
     }
     if (params.redirectResponse){
-      appendResponse(params.requestId, params.redirectResponse);
+      //appendResponse(params.requestId, params.redirectResponse);
     }
   } else if (message == "Network.responseReceived") {
-    appendResponse(params.requestId, params.response);
+    if (params.requestId) {
+      appendResponse(params.requestId, params.response);
+    }
   }
 }
 
@@ -41,61 +43,92 @@ function appendResponse(requestId, response) {
 }
 
 function handleResponse(responseData, response, requestId) {
-   if (!responseData) {
-      return;
-    }
-    responseBody = responseData.body;
+  if (!responseData) {
+    return;
+  }
+  responseBody = responseData.body;
 
-    var request = requests[requestId];
-    var requestUrl = request.url;
-    if (requestUrl.toLowerCase().startsWith("data:") || requestUrl.toLowerCase().startsWith("chrome-extension:") || requestUrl.toLowerCase().startsWith("javascript:")) {
-      return;
-    }
+  var request = requests[requestId];
+  var requestUrl = request.url;
+  if (requestUrl.toLowerCase().startsWith("data:") || requestUrl.toLowerCase().startsWith("chrome-extension:") || requestUrl.toLowerCase().startsWith("javascript:")) {
+    return;
+  }
 
-    var requestRow = document.createElement("tr");
-    requestRow.className = "request";
+  var requestRow = document.createElement("tr");
+  requestRow.className = "request";
 
-    var timeTd = document.createElement("td");
-    var dt = new Date();
-    var utcDate = dt.toUTCString();
-    timeTd.textContent = utcDate;
-    requestRow.appendChild(timeTd);
+  var timeTd = document.createElement("td");
+  var dt = new Date();
+  var utcDate = dt.toUTCString();
+  timeTd.textContent = utcDate;
+  requestRow.appendChild(timeTd);
 
-    var urlTd = document.createElement("td");
-    urlTd.textContent = requestUrl;
-    urlTd.className = "urlTd";
-    var responseDiv = document.createElement("div");
-    responseDiv.textContent = responseBody;
-    responseDiv.hidden = true;
-    $(urlTd).click(function() {$(responseDiv).toggle()});
-    urlTd.appendChild(responseDiv);
-    requestRow.appendChild(urlTd);
+  var urlTd = document.createElement("td");
+  urlTd.textContent = requestUrl;
+  urlTd.className = "urlTd";
+  var responseDiv = document.createElement("div");
+  responseDiv.textContent = responseBody;
+  responseDiv.hidden = true;
+  $(urlTd).click(function() {$(responseDiv).toggle()});
+  urlTd.appendChild(responseDiv);
+  requestRow.appendChild(urlTd);
 
-    var methodTd = document.createElement("td");
-    methodTd.textContent = request.method;
-    requestRow.appendChild(methodTd);
+  var methodTd = document.createElement("td");
+  methodTd.textContent = request.method;
+  requestRow.appendChild(methodTd);
 
-    var paramsTd = document.createElement("td");
-    paramsTd.className = "params";
-    var params = getQueryVariable(requestUrl);
-    var reflected = false;
-    params.forEach(function(param) {
-      var key = unescape(param[0]);
-      var value = unescape(param[1]);
-      var detectReflectionFromKeyOrValue = (key && responseBody.indexOf(key) > -1) || (value && responseBody.indexOf(value) > -1);
+  var paramsTd = document.createElement("td");
+  paramsTd.className = "params";
 
-      if (detectReflectionFromKeyOrValue) {
-        paramsTd.textContent += (key?key:"") + " = " + (value?value:"");
-        paramsTd.textContent += " (Reflects)";
-        paramsTd.textContent += "\n";
+  var parsedUrl = parseURL(requestUrl);
+  var parts = parsedUrl.path.split("/");
+  parts.forEach(function(pathPart) {
+      // Should check for reflection, but a lot of FP.
+    });
+
+  var params = getQueryVariable(requestUrl);
+  var reflected = false;
+  params.forEach(function(param) {
+    var key = unescape(param[0]);
+    var value = unescape(param[1]);
+    var detectReflectionFromKeyOrValue = (key && responseBody.indexOf(key) > -1) || (value && responseBody.indexOf(value) > -1);
+
+    if (key && responseBody.indexOf(key) > -1) {
+      if (testArbitraryReflection(requestUrl, request.method, key)) {
+        paramsTd.textContent += "Key: " + key + "\n";
         reflected = true;
       }
-    });
-    requestRow.appendChild(paramsTd);
-
-    if (reflected) {
-      document.getElementById("result").appendChild(requestRow);
     }
+    if (value && responseBody.indexOf(value) > -1) {
+      if (testArbitraryReflection(requestUrl, request.method, value)) {
+        paramsTd.textContent += "Value: " + value + "\n";
+        reflected = true;
+      }
+    }
+
+  });
+  requestRow.appendChild(paramsTd);
+
+  if (reflected) {
+    document.getElementById("result").appendChild(requestRow);
+  }
+}
+
+function testArbitraryReflection(url, method, value) {
+  if (method == "GET") {
+    var randomNonce = Math.floor(Math.random() * 2147483647);
+    var newUrl = url.replace(new RegExp(value, 'g'), randomNonce);
+
+    var xhr = new XMLHttpRequest();
+
+    xhr.open("GET", newUrl, false);
+    xhr.send();
+
+    var result = xhr.responseText;
+    return result.indexOf(randomNonce) > -1;
+  }
+  // For now, return true to other method types.
+  return true;
 }
 
 function formatHeaders(headers) {
