@@ -143,7 +143,8 @@ function addRowToResult(url, responseBody, method, params, comments) {
 function testArbitraryReflection(url, method, value) {
   if (method == "GET") {
     var randomNonce = Math.floor(Math.random() * 2147483647);
-    var newUrl = replaceAll(url, value, randomNonce);
+    var urlParts = url.split("?");
+    var newUrl = urlParts[0] + "?"+ replaceAll(urlParts.slice(1).join("?"), value, randomNonce);
 
     var xhr = new XMLHttpRequest();
 
