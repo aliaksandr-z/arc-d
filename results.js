@@ -20,12 +20,28 @@ function onEvent(debuggeeId, message, params) {
       requests[params.requestId] = params.request;
     }
     if (params.redirectResponse){
-      //appendResponse(params.requestId, params.redirectResponse);
+      // Detect open redirection
+      checkForOpenRedirect(params);
     }
   } else if (message == "Network.responseReceived") {
     if (params.requestId) {
       appendResponse(params.requestId, params.response);
     }
+  }
+}
+
+function checkForOpenRedirect(params) {
+  if (params['redirectResponse'] != undefined) {
+    var requestUrl = params.redirectResponse.url;
+    var redirectToUrl = params.redirectResponse.headers.location;
+    var queryPairs = getQueryVariable(requestUrl);
+    queryPairs.forEach(function(data) {
+      var key = unescape(data[0]);
+      var value = unescape(data[1]);
+      if (value == redirectToUrl) {
+        addRowToResult(requestUrl, JSON.stringify(params.redirectResponse,null,2), params.request.method, key + "=" + value, "Possible Open Redirect");
+      }
+    })
   }
 }
 
@@ -54,32 +70,6 @@ function handleResponse(responseData, response, requestId) {
     return;
   }
 
-  var requestRow = document.createElement("tr");
-  requestRow.className = "request";
-
-  var timeTd = document.createElement("td");
-  var dt = new Date();
-  var utcDate = dt.toUTCString();
-  timeTd.textContent = utcDate;
-  requestRow.appendChild(timeTd);
-
-  var urlTd = document.createElement("td");
-  urlTd.textContent = requestUrl;
-  urlTd.className = "urlTd";
-  var responseDiv = document.createElement("div");
-  responseDiv.textContent = responseBody;
-  responseDiv.hidden = true;
-  $(urlTd).click(function() {$(responseDiv).toggle()});
-  urlTd.appendChild(responseDiv);
-  requestRow.appendChild(urlTd);
-
-  var methodTd = document.createElement("td");
-  methodTd.textContent = request.method;
-  requestRow.appendChild(methodTd);
-
-  var paramsTd = document.createElement("td");
-  paramsTd.className = "params";
-
   var parsedUrl = parseURL(requestUrl);
   var parts = parsedUrl.path.split("/");
   parts.forEach(function(pathPart) {
@@ -88,6 +78,7 @@ function handleResponse(responseData, response, requestId) {
 
   var params = getQueryVariable(requestUrl);
   var reflected = false;
+  var reflectedParams = "";
   params.forEach(function(param) {
     var key = unescape(param[0]);
     var value = unescape(param[1]);
@@ -95,23 +86,58 @@ function handleResponse(responseData, response, requestId) {
 
     if (key && responseBody.indexOf(key) > -1) {
       if (testArbitraryReflection(requestUrl, request.method, param[0])) {
-        paramsTd.textContent += "Key: " + key + "\n";
+        reflectedParams += "Key: " + key + "\n";
         reflected = true;
       }
     }
     if (value && responseBody.indexOf(value) > -1) {
       if (testArbitraryReflection(requestUrl, request.method, param[1])) {
-        paramsTd.textContent += "Value: " + value + "\n";
+        reflectedParams += "Value: " + value + "\n";
         reflected = true;
       }
     }
 
   });
-  requestRow.appendChild(paramsTd);
 
   if (reflected) {
-    document.getElementById("result").appendChild(requestRow);
+    addRowToResult(requestUrl, responseBody, request.method, reflectedParams, "");
   }
+}
+
+function addRowToResult(url, responseBody, method, params, comments) {
+  var requestRow = document.createElement("tr");
+  requestRow.className = "request";
+
+  var dt = new Date();
+  var utcDate = dt.toUTCString();
+  var timeTd = document.createElement("td");
+  timeTd.textContent = utcDate
+  requestRow.appendChild(timeTd);
+
+  var urlTd = document.createElement("td");
+  urlTd.textContent = url;
+  urlTd.className = "urlTd";
+
+  var responseDiv = document.createElement("div");
+  responseDiv.textContent = responseBody;
+  responseDiv.hidden = true;
+  $(urlTd).click(function() {$(responseDiv).toggle()});
+  urlTd.appendChild(responseDiv);
+  requestRow.appendChild(urlTd);
+
+  var methodTd = document.createElement("td");
+  methodTd.textContent = method;
+  requestRow.appendChild(methodTd);
+
+  var paramsTd = document.createElement("td");
+  paramsTd.className = "params";
+  paramsTd.textContent = params;
+  requestRow.appendChild(paramsTd);
+
+  var commentsTd = document.createElement("td");
+  commentsTd.textContent = comments;
+  requestRow.appendChild(commentsTd)
+  document.getElementById("result").appendChild(requestRow);
 }
 
 function testArbitraryReflection(url, method, value) {
