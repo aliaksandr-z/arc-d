@@ -6,7 +6,6 @@ window.addEventListener("load", function() {
 });
 
 window.addEventListener("unload", function() {
-
 });
 
 var requests = {};
@@ -119,10 +118,10 @@ function addRowToResult(url, responseBody, method, params, comments) {
   urlTd.className = "urlTd";
 
   var responseDiv = document.createElement("div");
-  responseDiv.textContent = responseBody;
-  responseDiv.hidden = true;
-  $(urlTd).click(function() {$(responseDiv).toggle()});
-  urlTd.appendChild(responseDiv);
+  //responseDiv.textContent = responseBody;
+  //responseDiv.hidden = true;
+  //$(urlTd).click(function() {$(responseDiv).toggle()});
+  //urlTd.appendChild(responseDiv);
   requestRow.appendChild(urlTd);
 
   var methodTd = document.createElement("td");
