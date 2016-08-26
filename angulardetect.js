@@ -1,6 +1,6 @@
 function injectXssMethod() {
   var triggered = false;
-  Object.defineProperty(Object.prototype, 'angularxss', {
+  Object.defineProperty(Object.prototype, 'xss', {
     value: function() {
       if (!triggered) {
         alert("Angular XSS: " + document.domain);
