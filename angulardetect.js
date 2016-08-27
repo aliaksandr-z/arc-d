@@ -1,5 +1,22 @@
+function injectXssMethod() {
+  var triggered = false;
+  Object.defineProperty(Object.prototype, 'angularxss', {
+    value: function() {
+      if (!triggered) {
+        alert("Angular XSS: " + document.domain);
+        triggered = true;
+      } else {
+        console.log("Alert already triggered on" + document.domain);
+      }
+    },
+    enumerable: false,
+    writable: true,
+    configurable: true
+  });
+}
 
-var script = document.createElement('script');
-script.innerHTML = "Object.defineProperty(Object, 'xss', {enumerable: false, value: function() {alert('a');}});";
-document.body.appendChild(script);
-
+var code = "(" + injectXssMethod.toString() + ")()";
+var script = document.createElement("script");
+script.innerText = code;
+document.documentElement.appendChild(script);
+document.documentElement.removeChild(script);
